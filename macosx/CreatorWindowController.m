@@ -43,6 +43,7 @@
 
 @end
 
+NSMutableSet *creatorWindowControllerSet = nil;
 @implementation CreatorWindowController
 
 + (CreatorWindowController *) createTorrentFile: (tr_session *) handle
@@ -68,9 +69,13 @@
 {
     if ((self = [super initWithWindowNibName: @"Creator"]))
     {
+        if (!creatorWindowControllerSet) {
+            creatorWindowControllerSet = [NSMutableSet set];
+        }
+        
         fStarted = NO;
 
-        fPath = [path retain];
+        fPath = path;
         fInfo = tr_metaInfoBuilderCreate([[fPath path] UTF8String]);
 
         if (fInfo->fileCount == 0)
@@ -84,9 +89,7 @@
             [alert setAlertStyle: NSWarningAlertStyle];
 
             [alert runModal];
-            [alert release];
 
-            [self release];
             return nil;
         }
         if (fInfo->totalSize == 0)
@@ -100,9 +103,7 @@
             [alert setAlertStyle: NSWarningAlertStyle];
 
             [alert runModal];
-            [alert release];
 
-            [self release];
             return nil;
         }
 
@@ -129,9 +130,11 @@
         //remove potentially invalid addresses
         for (NSInteger i = [fTrackers count]-1; i >= 0; i--)
         {
-            if (!tr_urlIsValidTracker([[fTrackers objectAtIndex: i] UTF8String]))
+            if (!tr_urlIsValidTracker([fTrackers[i] UTF8String]))
                 [fTrackers removeObjectAtIndex: i];
         }
+        
+        [creatorWindowControllerSet addObject:self];
     }
     return self;
 }
@@ -175,7 +178,7 @@
         [fPiecesField setStringValue: [NSString stringWithFormat: NSLocalizedString(@"%d pieces, %@ each", "Create torrent -> info"),
                                                             fInfo->pieceCount, [NSString stringForFileSize: fInfo->pieceSize]]];
 
-    fLocation = [[[fDefaults URLForKey: @"CreatorLocationURL"] URLByAppendingPathComponent: [name stringByAppendingPathExtension: @"torrent"]] retain];
+    fLocation = [[fDefaults URLForKey: @"CreatorLocationURL"] URLByAppendingPathComponent: [name stringByAppendingPathExtension: @"torrent"]];
     if (!fLocation)
     {
         //for 2.5 and earlier
@@ -194,18 +197,10 @@
 
 - (void) dealloc
 {
-    [fPath release];
-    [fLocation release];
-
-    [fTrackers release];
-
     if (fInfo)
         tr_metaInfoBuilderFree(fInfo);
 
     [fTimer invalidate];
-    [fTimer release];
-
-    [super dealloc];
 }
 
 + (void) restoreWindowWithIdentifier: (NSString *) identifier state: (NSCoder *) state completionHandler: (void (^)(NSWindow *, NSError *)) completionHandler
@@ -233,12 +228,10 @@
 
 - (void) window: (NSWindow *) window didDecodeRestorableState: (NSCoder *) coder
 {
-    [fLocation release];
-    fLocation = [[coder decodeObjectForKey: @"TRCreatorLocation"] retain];
+    fLocation = [coder decodeObjectForKey: @"TRCreatorLocation"];
     [self updateLocationField];
 
-    [fTrackers release];
-    fTrackers = [[coder decodeObjectForKey: @"TRCreatorTrackers"] retain];
+    fTrackers = [coder decodeObjectForKey: @"TRCreatorTrackers"];
     [fTrackerTable reloadData];
 
     [fOpenCheck setState: [coder decodeIntegerForKey: @"TRCreatorOpenCheck"]];
@@ -254,7 +247,7 @@
     [panel setMessage: NSLocalizedString(@"Select the name and location for the torrent file.",
                                         "Create torrent -> location sheet -> message")];
 
-    [panel setAllowedFileTypes: [NSArray arrayWithObjects: @"org.bittorrent.torrent", @"torrent", nil]];
+    [panel setAllowedFileTypes: @[@"org.bittorrent.torrent", @"torrent"]];
     [panel setCanSelectHiddenExtension: YES];
 
     [panel setDirectoryURL: [fLocation URLByDeletingLastPathComponent]];
@@ -263,8 +256,7 @@
     [panel beginSheetModalForWindow: [self window] completionHandler: ^(NSInteger result) {
         if (result == NSFileHandlingPanelOKButton)
         {
-            [fLocation release];
-            fLocation = [[panel URL] retain];
+            fLocation = [panel URL];
             [self updateLocationField];
         }
     }];
@@ -310,7 +302,7 @@
 
 - (void) windowWillClose: (NSNotification *) notification
 {
-    [self autorelease];
+    [creatorWindowControllerSet removeObject:self];
 }
 
 - (IBAction) cancelCreateProgress: (id) sender
@@ -326,7 +318,7 @@
 
 - (id) tableView: (NSTableView *) tableView objectValueForTableColumn: (NSTableColumn *) tableColumn row: (NSInteger) row
 {
-    return [fTrackers objectAtIndex: row];
+    return fTrackers[row];
 }
 
 - (IBAction) addRemoveTracker: (id) sender
@@ -369,7 +361,7 @@
         [fTrackers removeObjectAtIndex: row];
     }
     else
-        [fTrackers replaceObjectAtIndex: row withObject: tracker];
+        fTrackers[row] = tracker;
 
     [fTrackerTable deselectAll: self];
     [fTrackerTable reloadData];
@@ -387,7 +379,7 @@
 
     NSPasteboard * pb = [NSPasteboard generalPasteboard];
     [pb clearContents];
-    [pb writeObjects: [NSArray arrayWithObject: text]];
+    [pb writeObjects: @[text]];
 }
 
 - (BOOL) validateMenuItem: (NSMenuItem *) menuItem
@@ -399,7 +391,7 @@
 
     if (action == @selector(paste:))
         return [[self window] firstResponder] == fTrackerTable
-            && [[NSPasteboard generalPasteboard] canReadObjectForClasses: [NSArray arrayWithObject: [NSString class]] options: nil];
+            && [[NSPasteboard generalPasteboard] canReadObjectForClasses: @[[NSString class]] options: nil];
 
     return YES;
 }
@@ -408,7 +400,7 @@
 {
     NSMutableArray * tempTrackers = [NSMutableArray array];
 
-    NSArray * items = [[NSPasteboard generalPasteboard] readObjectsForClasses: [NSArray arrayWithObject: [NSString class]] options: nil];
+    NSArray * items = [[NSPasteboard generalPasteboard] readObjectsForClasses: @[[NSString class]] options: nil];
     NSAssert(items != nil, @"no string items to paste; should not be able to call this method");
 
     for (NSString * pbItem in items)
@@ -419,7 +411,7 @@
 
     BOOL added = NO;
 
-    for (NSString * tracker in tempTrackers)
+    for (__strong NSString * tracker in tempTrackers)
     {
         tracker = [tracker stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
 
@@ -467,7 +459,7 @@
     [panel setMessage: NSLocalizedString(@"Select a file or folder for the torrent file.", "Create torrent -> select file")];
 
     BOOL success = [panel runModal] == NSOKButton;
-    return success ? [[panel URLs] objectAtIndex: 0] : nil;
+    return success ? [panel URLs][0] : nil;
 }
 
 - (void) createBlankAddressAlertDidEnd: (NSAlert *) alert returnCode: (NSInteger) returnCode contextInfo: (void *) contextInfo
@@ -479,7 +471,6 @@
             [[NSUserDefaults standardUserDefaults] setBool: NO forKey: @"WarningCreatorPrivateBlankAddress"];
     }
 
-    [alert release];
 
     if (returnCode == NSAlertFirstButtonReturn)
         [self performSelectorOnMainThread: @selector(createReal) withObject: nil waitUntilDone: NO];
@@ -490,7 +481,7 @@
     //check if the location currently exists
     if (![[fLocation URLByDeletingLastPathComponent] checkResourceIsReachableAndReturnError: NULL])
     {
-        NSAlert * alert = [[[NSAlert alloc] init] autorelease];
+        NSAlert * alert = [[NSAlert alloc] init];
         [alert addButtonWithTitle: NSLocalizedString(@"OK", "Create torrent -> directory doesn't exist warning -> button")];
         [alert setMessageText: NSLocalizedString(@"The chosen torrent file location does not exist.",
                                                 "Create torrent -> directory doesn't exist warning -> title")];
@@ -511,7 +502,7 @@
         NSArray * pathComponents = [fLocation pathComponents];
         NSInteger count = [pathComponents count];
 
-        NSAlert * alert = [[[NSAlert alloc] init] autorelease];
+        NSAlert * alert = [[NSAlert alloc] init];
         [alert addButtonWithTitle: NSLocalizedString(@"OK", "Create torrent -> file already exists warning -> button")];
         [alert setMessageText: NSLocalizedString(@"A torrent file with this name and directory cannot be created.",
                                                 "Create torrent -> file already exists warning -> title")];
@@ -519,7 +510,7 @@
                 NSLocalizedString(@"A file with the name \"%@\" already exists in the directory \"%@\". "
                     "Choose a new name or directory to create the torrent file.",
                     "Create torrent -> file already exists warning -> warning"),
-                    [pathComponents objectAtIndex: count-1], [pathComponents objectAtIndex: count-2]]];
+                    pathComponents[count-1], pathComponents[count-2]]];
         [alert setAlertStyle: NSWarningAlertStyle];
 
         [alert beginSheetModalForWindow: [self window] modalDelegate: self didEndSelector: nil contextInfo: nil];
@@ -531,7 +522,7 @@
 
     for (NSUInteger i = 0; i < [fTrackers count]; i++)
     {
-        trackerInfo[i].announce = (char *)[[fTrackers objectAtIndex: i] UTF8String];
+        trackerInfo[i].announce = (char *)[fTrackers[i] UTF8String];
         trackerInfo[i].tier = i;
     }
 
@@ -548,7 +539,7 @@
     tr_makeMetaInfo(fInfo, [[fLocation path] UTF8String], trackerInfo, [fTrackers count], [[fCommentView string] UTF8String], [fPrivateCheck state] == NSOnState);
     tr_free(trackerInfo);
 
-    fTimer = [[NSTimer scheduledTimerWithTimeInterval: 0.1 target: self selector: @selector(checkProgress) userInfo: nil repeats: YES] retain];
+    fTimer = [NSTimer scheduledTimerWithTimeInterval: 0.1 target: self selector: @selector(checkProgress) userInfo: nil repeats: YES];
 }
 
 - (void) checkProgress
@@ -556,7 +547,6 @@
     if (fInfo->isDone)
     {
         [fTimer invalidate];
-        [fTimer release];
         fTimer = nil;
 
         NSAlert * alert;
@@ -565,8 +555,10 @@
             case TR_MAKEMETA_OK:
                 if (fOpenWhenCreated)
                 {
-                    NSDictionary * dict = [[NSDictionary alloc] initWithObjectsAndKeys: [fLocation path], @"File",
-                                            [[fPath URLByDeletingLastPathComponent] path], @"Path", nil];
+                    NSDictionary * dict = [[NSDictionary alloc] initWithObjects: @[
+                        [fLocation path],
+                        [[fPath URLByDeletingLastPathComponent] path]]
+                        forKeys: @[@"File", @"Path"]];
                     [[NSNotificationCenter defaultCenter] postNotificationName: @"OpenCreatedTorrentFile" object: self userInfo: dict];
                 }
 
@@ -578,7 +570,7 @@
                 break;
 
             default:
-                alert = [[[NSAlert alloc] init] autorelease];
+                alert = [[NSAlert alloc] init];
                 [alert addButtonWithTitle: NSLocalizedString(@"OK", "Create torrent -> failed -> button")];
                 [alert setMessageText: [NSString stringWithFormat: NSLocalizedString(@"Creation of \"%@\" failed.",
                                                 "Create torrent -> failed -> title"), [fLocation lastPathComponent]]];

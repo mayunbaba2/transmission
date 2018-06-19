@@ -81,25 +81,17 @@ NSMutableSet * fTrackerIconLoading;
                                 [NSFont messageFontOfSize: 9.0], NSFontAttributeName,
                                 paragraphStyle, NSParagraphStyleAttributeName, nil];
 
-        [paragraphStyle release];
     }
     return self;
 }
 
-- (void) dealloc
-{
-    [fNameAttributes release];
-    [fStatusAttributes release];
-
-    [super dealloc];
-}
 
 - (id) copyWithZone: (NSZone *) zone
 {
     TrackerCell * copy = [super copyWithZone: zone];
 
-    copy->fNameAttributes = [fNameAttributes retain];
-    copy->fStatusAttributes = [fStatusAttributes retain];
+    copy->fNameAttributes = fNameAttributes;
+    copy->fStatusAttributes = fStatusAttributes;
 
     return copy;
 }
@@ -119,8 +111,8 @@ NSMutableSet * fTrackerIconLoading;
         statusColor = [NSColor darkGrayColor];
     }
 
-    [fNameAttributes setObject: nameColor forKey: NSForegroundColorAttributeName];
-    [fStatusAttributes setObject: statusColor forKey: NSForegroundColorAttributeName];
+    fNameAttributes[NSForegroundColorAttributeName] = nameColor;
+    fStatusAttributes[NSForegroundColorAttributeName] = statusColor;
 
     TrackerNode * node = (TrackerNode *)[self objectValue];
 
@@ -198,7 +190,7 @@ NSMutableSet * fTrackerIconLoading;
         NSString * baseAddress;
         if (separable && [hostComponents count] > 1)
             baseAddress = [NSString stringWithFormat: @"http://%@.%@",
-                            [hostComponents objectAtIndex: [hostComponents count]-2], [hostComponents lastObject]];
+                            hostComponents[[hostComponents count]-2], [hostComponents lastObject]];
         else
             baseAddress = [NSString stringWithFormat: @"http://%@", host];
 
@@ -240,7 +232,6 @@ NSMutableSet * fTrackerIconLoading;
         if (icon)
         {
             [fTrackerIconCache setObject: icon forKey: baseAddress];
-            [icon release];
 
             [[self controlView] setNeedsDisplay: YES];
         }
@@ -300,18 +291,18 @@ NSMutableSet * fTrackerIconLoading;
 - (NSAttributedString *) attributedName
 {
     NSString * name = [(TrackerNode *)[self objectValue] host];
-    return [[[NSAttributedString alloc] initWithString: name attributes: fNameAttributes] autorelease];
+    return [[NSAttributedString alloc] initWithString: name attributes: fNameAttributes];
 }
 
 - (NSAttributedString *) attributedStatusWithString: (NSString *) statusString
 {
-    return [[[NSAttributedString alloc] initWithString: statusString attributes: fStatusAttributes] autorelease];
+    return [[NSAttributedString alloc] initWithString: statusString attributes: fStatusAttributes];
 }
 
 - (NSAttributedString *) attributedCount: (NSInteger) count
 {
     NSString * countString = count != -1 ? [NSString stringWithFormat: @"%ld", count] : NSLocalizedString(@"N/A", "tracker peer stat");
-    return [[[NSAttributedString alloc] initWithString: countString attributes: fStatusAttributes] autorelease];
+    return [[NSAttributedString alloc] initWithString: countString attributes: fStatusAttributes];
 }
 
 @end

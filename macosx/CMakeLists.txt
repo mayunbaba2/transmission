@@ -1,5 +1,11 @@
 project(trmac)
 
+if(CMAKE_GENERATOR STREQUAL "Xcode")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC ON)
+else()
+    add_definitions(-fobjc-arc)
+endif()
+
 find_program(IBTOOL_EXECUTABLE ibtool REQUIRED)
 find_program(TIFFUTIL_EXECUTABLE tiffutil REQUIRED)
 find_program(INSTALL_NAME_TOOL_EXECUTABLE install_name_tool REQUIRED)
@@ -365,6 +371,7 @@ endforeach()
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/libtransmission
+    ${CMAKE_BINARY_DIR}/libtransmission
     ${PROJECT_SOURCE_DIR}/VDKQueue
 )
 
@@ -394,13 +401,11 @@ add_executable(${TR_NAME}-mac MACOSX_BUNDLE
     ${${PROJECT_NAME}_RESOURCES}
 )
 
-find_library(GROWL_FRAMEWORK Growl PATHS ${PROJECT_SOURCE_DIR} NO_DEFAULT_PATHS)
 find_library(SPARKLE_FRAMEWORK Sparkle PATHS ${PROJECT_SOURCE_DIR} NO_DEFAULT_PATHS)
 
 target_link_libraries(${TR_NAME}-mac
     ${TR_NAME}
     vdkqueue
-    ${GROWL_FRAMEWORK}
     ${SPARKLE_FRAMEWORK}
     "-framework AppKit"
     "-framework Carbon"

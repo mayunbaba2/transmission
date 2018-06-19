@@ -42,12 +42,6 @@
     return self;
 }
 
-- (void) dealloc
-{
-    [fTorrents release];
-
-    [super dealloc];
-}
 
 - (void) awakeFromNib
 {
@@ -94,8 +88,7 @@
 - (void) setInfoForTorrents: (NSArray *) torrents
 {
     //don't check if it's the same in case the metadata changed
-    [fTorrents release];
-    fTorrents = [torrents retain];
+    fTorrents = torrents;
 
     fSet = NO;
 }
@@ -108,7 +101,7 @@
     if ([fTorrents count] != 1)
         return;
 
-    Torrent * torrent = [fTorrents objectAtIndex: 0];
+    Torrent * torrent = fTorrents[0];
 
     NSString * location = [torrent dataLocation];
     [fDataLocationField setStringValue: location ? [location stringByAbbreviatingWithTildeInPath] : @""];
@@ -119,13 +112,13 @@
 
 - (void) revealDataFile: (id) sender
 {
-    Torrent * torrent = [fTorrents objectAtIndex: 0];
+    Torrent * torrent = fTorrents[0];
     NSString * location = [torrent dataLocation];
     if (!location)
         return;
 
     NSURL * file = [NSURL fileURLWithPath: location];
-    [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs: [NSArray arrayWithObject: file]];
+    [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs: @[file]];
 }
 
 @end
@@ -136,7 +129,7 @@
 {
     if ([fTorrents count] == 1)
     {
-        Torrent * torrent = [fTorrents objectAtIndex: 0];
+        Torrent * torrent = fTorrents[0];
 
         #warning candidate for localizedStringWithFormat (although then we'll get two commas)
         NSString * piecesString = ![torrent isMagnet] ? [NSString stringWithFormat: @"%ld, %@", [torrent pieceCount],

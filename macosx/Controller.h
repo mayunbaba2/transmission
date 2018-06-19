@@ -23,7 +23,6 @@
 #import <Cocoa/Cocoa.h>
 #import <transmission.h>
 #import <Quartz/Quartz.h>
-#import <Growl/Growl.h>
 #import "VDKQueue.h"
 
 @class AddMagnetWindowController;
@@ -48,7 +47,7 @@ typedef enum
     ADD_CREATED
 } addType;
 
-@interface Controller : NSObject <GrowlApplicationBridgeDelegate, NSURLDownloadDelegate, NSUserNotificationCenterDelegate, NSPopoverDelegate, NSSharingServiceDelegate, NSSharingServicePickerDelegate, NSSoundDelegate, NSToolbarDelegate, NSWindowDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, VDKQueueDelegate>
+@interface Controller : NSObject <NSURLDownloadDelegate, NSUserNotificationCenterDelegate, NSPopoverDelegate, NSSharingServiceDelegate, NSSharingServicePickerDelegate, NSSoundDelegate, NSToolbarDelegate, NSWindowDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, VDKQueueDelegate>
 {
     tr_session                      * fLib;
 
@@ -148,7 +147,7 @@ typedef enum
 
 - (void) removeTorrents: (NSArray *) torrents deleteData: (BOOL) deleteData;
 - (void) removeSheetDidEnd: (NSWindow *) sheet returnCode: (NSInteger) returnCode
-                        contextInfo: (NSDictionary *) dict;
+                        contextInfo: (void *) contextInfo;
 - (void) confirmRemoveTorrents: (NSArray *) torrents deleteData: (BOOL) deleteData;
 - (void) removeNoDelete:                (id) sender;
 - (void) removeDeleteData:              (id) sender;
@@ -174,7 +173,7 @@ typedef enum
 
 - (NSArray *)selectedTorrents;
 
-@property (retain, readonly) PrefsController * prefsController;
+@property (nonatomic, readonly) PrefsController * prefsController;
 - (void) showPreferenceWindow: (id) sender;
 
 - (void) showAboutWindow: (id) sender;
@@ -183,7 +182,7 @@ typedef enum
 - (void) resetInfo;
 - (void) setInfoTab: (id) sender;
 
-@property (retain, readonly) MessageWindowController * messageWindowController;
+@property (nonatomic, readonly) MessageWindowController * messageWindowController;
 - (void) showMessageWindow: (id) sender;
 - (void) showStatsWindow: (id) sender;
 
@@ -226,7 +225,7 @@ typedef enum
 
 - (void) sleepCallback: (natural_t) messageType argument: (void *) messageArgument;
 
-@property (retain, readonly) VDKQueue * fileWatcherQueue;
+@property (nonatomic, readonly) VDKQueue * fileWatcherQueue;
 
 - (void) torrentTableViewSelectionDidChange: (NSNotification *) notification;
 
@@ -257,7 +256,7 @@ typedef enum
 
 - (void) linkHomepage: (id) sender;
 - (void) linkForums: (id) sender;
-- (void) linkTrac: (id) sender;
+- (void) linkGitHub: (id) sender;
 - (void) linkDonate: (id) sender;
 
 - (void) rpcCallback: (tr_rpc_callback_type) type forTorrentStruct: (struct tr_torrent *) torrentStruct;

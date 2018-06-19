@@ -100,17 +100,12 @@
 - (void) dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver: self];
-
-    [fTorrents release];
-
-    [super dealloc];
 }
 
 - (void) setInfoForTorrents: (NSArray *) torrents
 {
     //don't check if it's the same in case the metadata changed
-    [fTorrents release];
-    fTorrents = [torrents retain];
+    fTorrents = torrents;
 
     fSet = NO;
 }
@@ -159,7 +154,7 @@
 
     if (numberSelected == 1)
     {
-        Torrent * torrent = [fTorrents objectAtIndex: 0];
+        Torrent * torrent = fTorrents[0];
 
         [fStateField setStringValue: [torrent stateString]];
 
@@ -272,7 +267,7 @@
     }
     else
     {
-        Torrent * torrent = [fTorrents objectAtIndex: 0];
+        Torrent * torrent = fTorrents[0];
 
         const BOOL piecesAvailableSegment = [[NSUserDefaults standardUserDefaults] boolForKey: @"PiecesViewShowAvailability"];
         [fPiecesControl setSelected: piecesAvailableSegment forSegment: PIECES_CONTROL_AVAILABLE];

@@ -48,7 +48,7 @@
 - (id) copyWithZone: (NSZone *) zone
 {
     //this object is essentially immutable after initial setup
-    return [self retain];
+    return self;
 }
 
 - (BOOL) isEqual: (id) object
@@ -67,12 +67,12 @@
 
 - (NSString *) host
 {
-    return [NSString stringWithUTF8String: fStat.host];
+    return @(fStat.host);
 }
 
 - (NSString *) fullAnnounceAddress
 {
-    return [NSString stringWithUTF8String: fStat.announce];
+    return @(fStat.announce);
 }
 
 - (NSInteger) tier
@@ -111,7 +111,6 @@
         [dateFormatter setDoesRelativeDateFormatting: YES];
 
         dateString = [dateFormatter stringFromDate: [NSDate dateWithTimeIntervalSince1970: fStat.lastAnnounceTime]];
-        [dateFormatter release];
     }
     else
         dateString = NSLocalizedString(@"N/A", "Tracker last announce");
@@ -123,7 +122,7 @@
     {
         baseString = NSLocalizedString(@"Announce error", "Tracker last announce");
 
-        NSString * errorString = [NSString stringWithUTF8String: fStat.lastAnnounceResult];
+        NSString * errorString = @(fStat.lastAnnounceResult);
         if ([errorString isEqualToString: @""])
             baseString = [baseString stringByAppendingFormat: @": %@", dateString];
         else
@@ -201,7 +200,6 @@
         [dateFormatter setDoesRelativeDateFormatting: YES];
 
         dateString = [dateFormatter stringFromDate: [NSDate dateWithTimeIntervalSince1970: fStat.lastScrapeTime]];
-        [dateFormatter release];
     }
     else
         dateString = NSLocalizedString(@"N/A", "Tracker last scrape");
@@ -213,7 +211,7 @@
     {
         baseString = NSLocalizedString(@"Scrape error", "Tracker last scrape");
 
-        NSString * errorString = [NSString stringWithUTF8String: fStat.lastScrapeResult];
+        NSString * errorString = @(fStat.lastScrapeResult);
         if ([errorString isEqualToString: @""])
             baseString = [baseString stringByAppendingFormat: @": %@", dateString];
         else

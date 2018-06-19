@@ -44,8 +44,8 @@ set(TR_NAME ${PROJECT_NAME})
 #         "Z" for unsupported trunk builds,
 #         "0" for stable, supported releases
 # these should be the only two lines you need to change
-set(TR_USER_AGENT_PREFIX "2.92+")
-set(TR_PEER_ID_PREFIX "-TR292Z-")
+set(TR_USER_AGENT_PREFIX "2.94+")
+set(TR_PEER_ID_PREFIX "-TR294Z-")
 
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+).*" TR_VERSION "${TR_USER_AGENT_PREFIX}")
 set(TR_VERSION_MAJOR "${CMAKE_MATCH_1}")
@@ -321,6 +321,15 @@ tr_add_external_auto_library(DHT dht dht)
 
 if(ENABLE_UTP)
     tr_add_external_auto_library(UTP libutp utp)
+
+    if(UTP_UPSTREAM_TARGET)
+        # Use C++ linker for anything that depends on static libutp
+        # TODO: switch to imported targets for all the dependencies
+        add_library(UTP::UTP STATIC IMPORTED)
+        set_property(TARGET UTP::UTP PROPERTY IMPORTED_LOCATION "${UTP_LIBRARIES}")
+        set_property(TARGET UTP::UTP PROPERTY IMPORTED_LINK_INTERFACE_LANGUAGES "CXX")
+        set(UTP_LIBRARIES UTP::UTP)
+    endif()
 endif()
 
 tr_add_external_auto_library(B64 libb64 b64)
@@ -423,7 +432,6 @@ endif()
 include(LargeFileSupport)
 
 set(NEEDED_HEADERS
-    stdbool.h
     sys/statvfs.h
     xfs/xfs.h
     xlocale.h)

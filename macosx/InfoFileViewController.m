@@ -82,18 +82,11 @@
     [fCheckAllButton setFrame: checkAllFrame];
 }
 
-- (void) dealloc
-{
-    [fTorrents release];
-
-    [super dealloc];
-}
 
 - (void) setInfoForTorrents: (NSArray *) torrents
 {
     //don't check if it's the same in case the metadata changed
-    [fTorrents release];
-    fTorrents = [torrents retain];
+    fTorrents = torrents;
 
     fSet = NO;
 }
@@ -108,7 +101,7 @@
         [fFileController refresh];
 
         #warning use TorrentFileCheckChange notification as well
-        Torrent * torrent = [fTorrents objectAtIndex: 0];
+        Torrent * torrent = fTorrents[0];
         if ([torrent isFolder])
         {
             const NSInteger filesCheckState = [torrent checkForFiles: [NSIndexSet indexSetWithIndexesInRange: NSMakeRange(0, [torrent fileCount])]];
@@ -141,7 +134,7 @@
 - (NSArray *) quickLookURLs
 {
     FileOutlineView * fileOutlineView = [fFileController outlineView];
-    Torrent * torrent = [fTorrents objectAtIndex: 0];
+    Torrent * torrent = fTorrents[0];
     NSIndexSet * indexes = [fileOutlineView selectedRowIndexes];
     NSMutableArray * urlArray = [NSMutableArray arrayWithCapacity: [indexes count]];
 
@@ -160,7 +153,7 @@
     if ([fTorrents count] != 1)
         return NO;
 
-    Torrent * torrent = [fTorrents objectAtIndex: 0];
+    Torrent * torrent = fTorrents[0];
     if (![torrent isFolder])
         return NO;
 
@@ -179,7 +172,7 @@
     FileOutlineView * fileOutlineView = [fFileController outlineView];
 
     NSString * fullPath = [(NSURL *)item path];
-    Torrent * torrent = [fTorrents objectAtIndex: 0];
+    Torrent * torrent = fTorrents[0];
     NSRange visibleRows = [fileOutlineView rowsInRect: [fileOutlineView bounds]];
 
     for (NSUInteger row = visibleRows.location; row < NSMaxRange(visibleRows); row++)
@@ -212,7 +205,7 @@
 
     if ([fTorrents count] == 1)
     {
-        Torrent * torrent = [fTorrents objectAtIndex: 0];
+        Torrent * torrent = fTorrents[0];
 
         [fFileController setTorrent: torrent];
 
@@ -240,7 +233,7 @@
 
 - (BOOL) canQuickLookFile: (FileListNode *) item
 {
-    Torrent * torrent = [fTorrents objectAtIndex: 0];
+    Torrent * torrent = fTorrents[0];
     return ([item isFolder] || [torrent fileProgress: item] >= 1.0) && [torrent fileLocation: item];
 }
 

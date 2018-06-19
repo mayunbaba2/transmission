@@ -3,10 +3,10 @@ dnl STATUS: "X" for prerelease beta builds,
 dnl         "Z" for unsupported trunk builds,
 dnl         "0" for stable, supported releases
 dnl these should be the only two lines you need to change
-m4_define([user_agent_prefix],[2.92+])
-m4_define([peer_id_prefix],[-TR292Z-])
+m4_define([user_agent_prefix],[2.94+])
+m4_define([peer_id_prefix],[-TR294Z-])
 
-AC_INIT([transmission],[user_agent_prefix],[https://trac.transmissionbt.com/newticket])
+AC_INIT([transmission],[user_agent_prefix],[https://github.com/transmission/transmission])
 AC_SUBST(USERAGENT_PREFIX,[user_agent_prefix])
 AC_SUBST(PEERID_PREFIX,[peer_id_prefix])
 
@@ -109,7 +109,7 @@ AC_PROG_MKDIR_P
 AC_HEADER_STDC
 AC_HEADER_TIME
 
-AC_CHECK_HEADERS([stdbool.h xlocale.h])
+AC_CHECK_HEADERS([xlocale.h])
 AC_CHECK_FUNCS([iconv pread pwrite lrintf strlcpy daemon dirname basename canonicalize_file_name strcasecmp localtime_r fallocate64 posix_fallocate memmem strsep strtold syslog valloc getpagesize posix_memalign statvfs htonll ntohll mkdtemp uselocale _configthreadlocale])
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
@@ -394,14 +394,12 @@ dnl Let's hope it's 1.7 or higher, since it provides
 dnl MINIUPNPC_API_VERSION and we won't have to figure
 dnl it out on our own
 if test "x$upnp_version" = "xunknown" ; then
-  AC_RUN_IFELSE(
+  AC_COMPILE_IFELSE(
     [AC_LANG_PROGRAM(
       [#include <stdlib.h>
        #include <miniupnpc/miniupnpc.h>],
-      [#ifdef MINIUPNPC_API_VERSION
-       return EXIT_SUCCESS;
-       #else
-       return EXIT_FAILURE;
+      [#ifndef MINIUPNPC_API_VERSION
+       #error MINIUPNPC_API_VERSION undefined
        #endif]
     )],
     [upnp_version=">= 1.7"]

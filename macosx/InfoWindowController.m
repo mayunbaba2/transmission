@@ -139,17 +139,6 @@ typedef enum
 
     if ([fViewController respondsToSelector: @selector(saveViewSize)])
         [fViewController saveViewSize];
-
-    [fGeneralViewController release];
-    [fActivityViewController release];
-    [fTrackersViewController release];
-    [fPeersViewController release];
-    [fFileViewController release];
-    [fOptionsViewController release];
-
-    [fTorrents release];
-
-    [super dealloc];
 }
 
 - (void) setInfoForTorrents: (NSArray *) torrents
@@ -157,8 +146,7 @@ typedef enum
     if (fTorrents && [fTorrents isEqualToArray: torrents])
         return;
 
-    [fTorrents release];
-    fTorrents = [torrents retain];
+    fTorrents = torrents;
 
     [self resetInfo];
 }
@@ -456,7 +444,6 @@ typedef enum
                 NSByteCountFormatter * formatter = [[NSByteCountFormatter alloc] init];
                 [formatter setAllowedUnits: NSByteCountFormatterUseBytes];
                 [fBasicInfoField setToolTip: [formatter stringFromByteCount: size]];
-                [formatter release];
             }
             else
             {
@@ -480,7 +467,7 @@ typedef enum
     }
     else
     {
-        Torrent * torrent = [fTorrents objectAtIndex: 0];
+        Torrent * torrent = fTorrents[0];
 
         [fImageView setImage: [torrent icon]];
 
@@ -508,7 +495,6 @@ typedef enum
             NSByteCountFormatter * formatter = [[NSByteCountFormatter alloc] init];
             [formatter setAllowedUnits: NSByteCountFormatterUseBytes];
             [fBasicInfoField setToolTip: [formatter stringFromByteCount: [torrent size]]];
-            [formatter release];
         }
         else
         {
@@ -532,7 +518,7 @@ typedef enum
 
 - (void) resetInfoForTorrent: (NSNotification *) notification
 {
-    Torrent * torrent = [[notification userInfo] objectForKey: @"Torrent"];
+    Torrent * torrent = [notification userInfo][@"Torrent"];
     if (fTorrents && (!torrent || [fTorrents containsObject: torrent]))
         [self resetInfo];
 }

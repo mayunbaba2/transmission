@@ -85,17 +85,6 @@
 - (void) dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver: self];
-
-    [fCollapsedGroups release];
-
-    [fPiecesBarAnimation release];
-    [fMenuTorrent release];
-
-    [fSelectedValues release];
-
-    [fTorrentCell release];
-
-    [super dealloc];
 }
 
 - (void) awakeFromNib
@@ -238,7 +227,7 @@
         if (![[self itemAtRow: row] isKindOfClass: [Torrent class]])
             continue;
 
-        NSDictionary * userInfo = [NSDictionary dictionaryWithObject: [NSNumber numberWithInteger: row] forKey: @"Row"];
+        NSDictionary * userInfo = @{@"Row": @(row)};
         TorrentCell * cell = (TorrentCell *)[self preparedCellAtColumn: -1 row: row];
         [cell addTrackingAreasForView: self inRect: [self rectOfRow: row] withUserInfo: userInfo mouseLocation: mouseLocation];
     }
@@ -253,7 +242,7 @@
 
     for (NSTrackingArea * area in [self trackingAreas])
     {
-        if ([area owner] == self && [[area userInfo] objectForKey: @"Row"])
+        if ([area owner] == self && [area userInfo][@"Row"])
             [self removeTrackingArea: area];
     }
 }
@@ -293,10 +282,10 @@
     NSDictionary * dict = (NSDictionary *)[event userData];
 
     NSNumber * row;
-    if ((row = [dict objectForKey: @"Row"]))
+    if ((row = dict[@"Row"]))
     {
         NSInteger rowVal = [row integerValue];
-        NSString * type = [dict objectForKey: @"Type"];
+        NSString * type = dict[@"Type"];
         if ([type isEqualToString: @"Action"])
             fMouseActionRow = rowVal;
         else if ([type isEqualToString: @"Control"])
@@ -319,9 +308,9 @@
     NSDictionary * dict = (NSDictionary *)[event userData];
 
     NSNumber * row;
-    if ((row = [dict objectForKey: @"Row"]))
+    if ((row = dict[@"Row"]))
     {
-        NSString * type = [dict objectForKey: @"Type"];
+        NSString * type = dict[@"Type"];
         if ([type isEqualToString: @"Action"])
             fMouseActionRow = -1;
         else if ([type isEqualToString: @"Control"])
@@ -349,7 +338,7 @@
 
 - (void) outlineViewItemDidExpand: (NSNotification *) notification
 {
-    NSInteger value = [[[notification userInfo] objectForKey: @"NSObject"] groupIndex];
+    NSInteger value = [[notification userInfo][@"NSObject"] groupIndex];
     if (value < 0)
         value = MAX_GROUP;
 
@@ -362,7 +351,7 @@
 
 - (void) outlineViewItemDidCollapse: (NSNotification *) notification
 {
-    NSInteger value = [[[notification userInfo] objectForKey: @"NSObject"] groupIndex];
+    NSInteger value = [[notification userInfo][@"NSObject"] groupIndex];
     if (value < 0)
         value = MAX_GROUP;
 
@@ -388,11 +377,10 @@
 
     //if pushing a button, don't change the selected rows
     if (pushed)
-        fSelectedValues = [[self selectedValues] retain];
+        fSelectedValues = [self selectedValues];
 
     [super mouseDown: event];
 
-    [fSelectedValues release];
     fSelectedValues = nil;
 
     //avoid weird behavior when showing menu by doing this after mouse down
@@ -533,11 +521,11 @@
         [fController openURL: [url absoluteString]];
     else
     {
-        NSArray * items = [[NSPasteboard generalPasteboard] readObjectsForClasses: [NSArray arrayWithObject: [NSString class]] options: nil];
+        NSArray * items = [[NSPasteboard generalPasteboard] readObjectsForClasses: @[[NSString class]] options: nil];
         if (items)
         {
             NSDataDetector * detector = [NSDataDetector dataDetectorWithTypes: NSTextCheckingTypeLink error: nil];
-            for (NSString * pbItem in items)
+            for (__strong NSString * pbItem in items)
             {
                 pbItem = [pbItem stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
                 if ([pbItem rangeOfString: @"magnet:" options: (NSAnchoredSearch | NSCaseInsensitiveSearch)].location != NSNotFound)
@@ -562,11 +550,11 @@
         if ([[[NSPasteboard generalPasteboard] types] containsObject: NSURLPboardType])
             return YES;
 
-        NSArray * items = [[NSPasteboard generalPasteboard] readObjectsForClasses: [NSArray arrayWithObject: [NSString class]] options: nil];
+        NSArray * items = [[NSPasteboard generalPasteboard] readObjectsForClasses: @[[NSString class]] options: nil];
         if (items)
         {
             NSDataDetector * detector = [NSDataDetector dataDetectorWithTypes: NSTextCheckingTypeLink error: nil];
-            for (NSString * pbItem in items)
+            for (__strong NSString * pbItem in items)
             {
                 pbItem = [pbItem stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
                 if (([pbItem rangeOfString: @"magnet:" options: (NSAnchoredSearch | NSCaseInsensitiveSearch)].location != NSNotFound)
@@ -584,15 +572,15 @@
 - (void) toggleControlForTorrent: (Torrent *) torrent
 {
     if ([torrent isActive])
-        [fController stopTorrents: [NSArray arrayWithObject: torrent]];
+        [fController stopTorrents: @[torrent]];
     else
     {
         if ([NSEvent modifierFlags] & NSAlternateKeyMask)
-            [fController resumeTorrentsNoWait: [NSArray arrayWithObject: torrent]];
+            [fController resumeTorrentsNoWait: @[torrent]];
         else if ([torrent waitingToStart])
-            [fController stopTorrents: [NSArray arrayWithObject: torrent]];
+            [fController stopTorrents: @[torrent]];
         else
-            [fController resumeTorrents: [NSArray arrayWithObject: torrent]];
+            [fController resumeTorrents: @[torrent]];
     }
 }
 
@@ -616,11 +604,9 @@
     [popover setDelegate: self];
 
     [popover showRelativeToRect: rect ofView: self preferredEdge: NSMaxYEdge];
-    [infoViewController setInfoForTorrents: [NSArray arrayWithObject: torrent]];
+    [infoViewController setInfoForTorrents: @[torrent]];
     [infoViewController updateInfo];
 
-    [infoViewController release];
-    [popover release];
 }
 
 //don't show multiple popovers when clicking the gear button repeatedly
@@ -655,9 +641,8 @@
                         "Action menu -> upload/download limit"), speedLimitActionValue[i]] action: @selector(setQuickLimit:)
                         keyEquivalent: @""];
                 [item setTarget: self];
-                [item setRepresentedObject: [NSNumber numberWithInt: speedLimitActionValue[i]]];
+                [item setRepresentedObject: @(speedLimitActionValue[i])];
                 [menu addItem: item];
-                [item release];
             }
         }
 
@@ -684,9 +669,8 @@
                 item = [[NSMenuItem alloc] initWithTitle: [NSString localizedStringWithFormat: @"%.2f", ratioLimitActionValue[i]]
                         action: @selector(setQuickRatio:) keyEquivalent: @""];
                 [item setTarget: self];
-                [item setRepresentedObject: [NSNumber numberWithFloat: ratioLimitActionValue[i]]];
+                [item setRepresentedObject: @(ratioLimitActionValue[i])];
                 [menu addItem: item];
-                [item release];
             }
         }
 
@@ -802,10 +786,9 @@
 {
     NSMutableArray * progressMarks = [NSMutableArray arrayWithCapacity: 16];
     for (NSAnimationProgress i = 0.0625; i <= 1.0; i += 0.0625)
-        [progressMarks addObject: [NSNumber numberWithFloat: i]];
+        [progressMarks addObject: @(i)];
 
     //this stops a previous animation
-    [fPiecesBarAnimation release];
     fPiecesBarAnimation = [[NSAnimation alloc] initWithDuration: TOGGLE_PROGRESS_SECONDS animationCurve: NSAnimationEaseIn];
     [fPiecesBarAnimation setAnimationBlockingMode: NSAnimationNonblocking];
     [fPiecesBarAnimation setProgressMarks: progressMarks];
@@ -818,7 +801,6 @@
 {
     if (animation == fPiecesBarAnimation)
     {
-        [fPiecesBarAnimation release];
         fPiecesBarAnimation = nil;
     }
 }
@@ -869,7 +851,7 @@
     if (row < 0 || [[self itemAtRow: row] isKindOfClass: [Torrent class]])
         return NO;
 
-    NSString * ident = [[[self tableColumns] objectAtIndex: [self columnAtPoint: point]] identifier];
+    NSString * ident = [[self tableColumns][[self columnAtPoint: point]] identifier];
     return [ident isEqualToString: @"UL"] || [ident isEqualToString: @"UL Image"]
             || [ident isEqualToString: @"DL"] || [ident isEqualToString: @"DL Image"];
 }

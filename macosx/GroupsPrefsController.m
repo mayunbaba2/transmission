@@ -33,9 +33,9 @@
 
 @interface GroupsPrefsController ()
 
-@property (nonatomic, retain) IBOutlet NSWindow * groupRulesSheetWindow;
-@property (nonatomic, assign) IBOutlet NSPredicateEditor * ruleEditor;
-@property (nonatomic, assign) IBOutlet NSLayoutConstraint * ruleEditorHeightConstraint;
+@property (nonatomic, strong) IBOutlet NSWindow * groupRulesSheetWindow;
+@property (nonatomic, weak) IBOutlet NSPredicateEditor * ruleEditor;
+@property (nonatomic, weak) IBOutlet NSLayoutConstraint * ruleEditorHeightConstraint;
 
 @end
 
@@ -54,7 +54,7 @@
 
 - (void) awakeFromNib
 {
-    [fTableView registerForDraggedTypes: [NSArray arrayWithObject: GROUP_TABLE_VIEW_DATA_TYPE]];
+    [fTableView registerForDraggedTypes: @[GROUP_TABLE_VIEW_DATA_TYPE]];
 
     [fSelectedColorView addObserver: self forKeyPath: @"color" options: 0 context: NULL];
 
@@ -105,7 +105,7 @@
 
 - (BOOL) tableView: (NSTableView *) tableView writeRowsWithIndexes: (NSIndexSet *) rowIndexes toPasteboard: (NSPasteboard *) pboard
 {
-    [pboard declareTypes: [NSArray arrayWithObject: GROUP_TABLE_VIEW_DATA_TYPE] owner: self];
+    [pboard declareTypes: @[GROUP_TABLE_VIEW_DATA_TYPE] owner: self];
     [pboard setData: [NSKeyedArchiver archivedDataWithRootObject: rowIndexes] forType: GROUP_TABLE_VIEW_DATA_TYPE];
     return YES;
 }
@@ -211,7 +211,7 @@
         const NSInteger index = [[GroupsController groups] indexForRow: [fTableView selectedRow]];
         if (result == NSFileHandlingPanelOKButton)
         {
-            NSString * path = [[[panel URLs] objectAtIndex: 0] path];
+            NSString * path = [[panel URLs][0] path];
             [[GroupsController groups] setCustomDownloadLocation: path forIndex: index];
             [[GroupsController groups] setUsesCustomDownloadLocation: YES forIndex: index];
         }
@@ -367,9 +367,9 @@
     NSString * location = [[GroupsController groups] customDownloadLocationForIndex: index];
     if (location)
     {
-        ExpandedPathToPathTransformer * pathTransformer = [[[ExpandedPathToPathTransformer alloc] init] autorelease];
+        ExpandedPathToPathTransformer * pathTransformer = [[ExpandedPathToPathTransformer alloc] init];
         [[fCustomLocationPopUp itemAtIndex: 0] setTitle: [pathTransformer transformedValue: location]];
-        ExpandedPathToIconTransformer * iconTransformer = [[[ExpandedPathToIconTransformer alloc] init] autorelease];
+        ExpandedPathToIconTransformer * iconTransformer = [[ExpandedPathToIconTransformer alloc] init];
         [[fCustomLocationPopUp itemAtIndex: 0] setImage: [iconTransformer transformedValue: location]];
     }
     else

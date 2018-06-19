@@ -33,7 +33,6 @@
 #import "transmission.h"
 #import "utils.h"
 
-#import <Growl/Growl.h>
 #import <Sparkle/Sparkle.h>
 
 #define DOWNLOAD_FOLDER     0
@@ -58,8 +57,6 @@
 @interface PrefsController (Private)
 
 - (void) setPrefView: (id) sender;
-
-- (void) updateGrowlButton;
 
 - (void) setKeychainPassword: (const char *) password forService: (const char *) service username: (const char *) username;
 
@@ -93,7 +90,7 @@
             [fDefaults setObject: blocklistDate forKey: @"BlocklistNewLastUpdate"];
             [fDefaults removeObjectForKey: @"BlocklistLastUpdate"];
 
-            NSURL * blocklistDir = [[[[NSFileManager defaultManager] URLsForDirectory: NSApplicationDirectory inDomains: NSUserDomainMask] objectAtIndex: 0] URLByAppendingPathComponent: @"Transmission/blocklists/"];
+            NSURL * blocklistDir = [[[NSFileManager defaultManager] URLsForDirectory: NSApplicationDirectory inDomains: NSUserDomainMask][0] URLByAppendingPathComponent: @"Transmission/blocklists/"];
             [[NSFileManager defaultManager] moveItemAtURL: [blocklistDir URLByAppendingPathComponent: @"level1.bin"]
                 toURL: [blocklistDir URLByAppendingPathComponent: [NSString stringWithUTF8String: DEFAULT_BLOCKLIST_FILENAME]]
                 error: nil];
@@ -122,7 +119,7 @@
 
         fRPCWhitelistArray = [[fDefaults arrayForKey: @"RPCWhitelist"] mutableCopy];
         if (!fRPCWhitelistArray)
-            fRPCWhitelistArray = [[NSMutableArray arrayWithObject: @"127.0.0.1"] retain];
+            fRPCWhitelistArray = [NSMutableArray arrayWithObject: @"127.0.0.1"];
         [self updateRPCWhitelist];
 
         //reset old Sparkle settings from previous versions
@@ -132,9 +129,6 @@
             [[SUUpdater sharedUpdater] setAutomaticallyChecksForUpdates: [fDefaults boolForKey: @"CheckForUpdates"]];
             [fDefaults removeObjectForKey: @"CheckForUpdates"];
         }
-
-        //set built-in Growl
-        [GrowlApplicationBridge setShouldUseBuiltInNotifications: NO];
 
         [self setAutoUpdateToBeta: nil];
     }
@@ -147,18 +141,10 @@
     [[NSNotificationCenter defaultCenter] removeObserver: self];
 
     [fPortStatusTimer invalidate];
-    [fPortStatusTimer release];
     if (fPortChecker)
     {
         [fPortChecker cancelProbe];
-        [fPortChecker release];
     }
-
-    [fRPCWhitelistArray release];
-
-    [fRPCPassword release];
-
-    [super dealloc];
 }
 
 - (void) awakeFromNib
@@ -174,12 +160,8 @@
     [toolbar setSizeMode: NSToolbarSizeModeRegular];
     [toolbar setSelectedItemIdentifier: TOOLBAR_GENERAL];
     [[self window] setToolbar: toolbar];
-    [toolbar release];
 
     [self setPrefView: nil];
-
-    //make sure proper notification settings are shown
-    [self updateGrowlButton];
 
     //set download folder
     [fFolderPopUp selectItemAtIndex: [fDefaults boolForKey: @"DownloadLocationConstant"] ? DOWNLOAD_FOLDER : DOWNLOAD_TORRENT];
@@ -202,7 +184,7 @@
     fNatStatus = -1;
 
     [self updatePortStatus];
-    fPortStatusTimer = [[NSTimer scheduledTimerWithTimeInterval: 5.0 target: self selector: @selector(updatePortStatus) userInfo: nil repeats: YES] retain];
+    fPortStatusTimer = [NSTimer scheduledTimerWithTimeInterval: 5.0 target: self selector: @selector(updatePortStatus) userInfo: nil repeats: YES];
 
     //set peer connections
     [fPeersGlobalField setIntValue: [fDefaults integerForKey: @"PeersTotal"]];
@@ -306,17 +288,16 @@
     }
     else
     {
-        [item release];
         return nil;
     }
 
-    return [item autorelease];
+    return item;
 }
 
 - (NSArray *) toolbarAllowedItemIdentifiers: (NSToolbar *) toolbar
 {
-    return [NSArray arrayWithObjects: TOOLBAR_GENERAL, TOOLBAR_TRANSFERS, TOOLBAR_GROUPS, TOOLBAR_BANDWIDTH,
-                                        TOOLBAR_PEERS, TOOLBAR_NETWORK, TOOLBAR_REMOTE, nil];
+    return @[TOOLBAR_GENERAL, TOOLBAR_TRANSFERS, TOOLBAR_GROUPS, TOOLBAR_BANDWIDTH,
+                                        TOOLBAR_PEERS, TOOLBAR_NETWORK, TOOLBAR_REMOTE];
 }
 
 - (NSArray *) toolbarSelectableItemIdentifiers: (NSToolbar *) toolbar
@@ -327,12 +308,6 @@
 - (NSArray *) toolbarDefaultItemIdentifiers: (NSToolbar *) toolbar
 {
     return [self toolbarAllowedItemIdentifiers: toolbar];
-}
-
-- (void) windowDidBecomeMain: (NSNotification *) notification
-{
-    //this is a good place to see if Growl was quit/launched
-    [self updateGrowlButton];
 }
 
 + (void) restoreWindowWithIdentifier: (NSString *) identifier state: (NSCoder *) state completionHandler: (void (^)(NSWindow *, NSError *)) completionHandler
@@ -404,7 +379,6 @@
         if (fPortChecker)
         {
             [fPortChecker cancelProbe];
-            [fPortChecker release];
         }
         BOOL delay = natStatusChanged || tr_sessionIsPortForwardingEnabled(fHandle);
         fPortChecker = [[PortChecker alloc] initForPort: fPeerPort delay: delay withDelegate: self];
@@ -432,7 +406,6 @@
             NSAssert1(NO, @"Port checker returned invalid status: %d", [fPortChecker status]);
             break;
     }
-    [fPortChecker release];
     fPortChecker = nil;
 }
 
@@ -442,7 +415,7 @@
 
     NSArray * directories = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory, NSUserDomainMask | NSLocalDomainMask | NSSystemDomainMask, YES);
 
-    for (NSString * directory in directories)
+    for (__strong NSString * directory in directories)
     {
         directory = [directory stringByAppendingPathComponent: @"Sounds"];
 
@@ -450,7 +423,7 @@
         if ([[NSFileManager defaultManager] fileExistsAtPath: directory isDirectory: &isDirectory] && isDirectory)
         {
             NSArray * directoryContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath: directory error: NULL];
-            for (NSString * sound in directoryContents)
+            for (__strong NSString * sound in directoryContents)
             {
                 sound = [sound stringByDeletingPathExtension];
                 if ([NSSound soundNamed: sound])
@@ -707,7 +680,7 @@
 
 + (NSDate *) timeSumToDate: (NSInteger) sum
 {
-    NSDateComponents * comps = [[[NSDateComponents alloc] init] autorelease];
+    NSDateComponents * comps = [[NSDateComponents alloc] init];
     [comps setHour: sum / 60];
     [comps setMinute: sum % 60];
 
@@ -716,8 +689,7 @@
 
 - (BOOL) control: (NSControl *) control textShouldBeginEditing: (NSText *) fieldEditor
 {
-    [fInitialString release];
-    fInitialString = [[control stringValue] retain];
+    fInitialString = [control stringValue];
 
     return YES;
 }
@@ -728,7 +700,6 @@
     if (fInitialString)
     {
         [control setStringValue: fInitialString];
-        [fInitialString release];
         fInitialString = nil;
     }
     return NO;
@@ -739,19 +710,7 @@
     [[NSNotificationCenter defaultCenter] postNotificationName: @"UpdateUI" object: self];
 }
 
-- (IBAction) setBuiltInGrowlEnabled: (id) sender
-{
-    const BOOL enable = [(NSButton *)sender state] == NSOnState;
-    [fDefaults setBool: enable forKey: @"DisplayNotifications"];
-    [GrowlApplicationBridge setShouldUseBuiltInNotifications: enable];
-}
-
-- (IBAction) openGrowlApp: (id) sender
-{
-    [GrowlApplicationBridge openGrowlPreferences: YES];
-}
-
-- (void) openNotificationSystemPrefs: (id) sender
+- (IBAction) openNotificationSystemPrefs: (NSButton *) sender
 {
     [[NSWorkspace sharedWorkspace] openURL: [NSURL fileURLWithPath:@"/System/Library/PreferencePanes/Notifications.prefPane"]];
 }
@@ -774,7 +733,7 @@
 - (void) setDefaultForMagnets: (id) sender
 {
     NSString * bundleID = [[NSBundle mainBundle] bundleIdentifier];
-    const OSStatus result = LSSetDefaultHandlerForURLScheme((CFStringRef)@"magnet", (CFStringRef)bundleID);
+    const OSStatus result = LSSetDefaultHandlerForURLScheme((CFStringRef)@"magnet", (__bridge CFStringRef)bundleID);
     if (result != noErr)
         NSLog(@"Failed setting default magnet link handler");
 }
@@ -838,7 +797,7 @@
         {
             [fFolderPopUp selectItemAtIndex: DOWNLOAD_FOLDER];
 
-            NSString * folder = [[[panel URLs] objectAtIndex: 0] path];
+            NSString * folder = [[panel URLs][0] path];
             [fDefaults setObject: folder forKey: @"DownloadFolder"];
             [fDefaults setBool: YES forKey: @"DownloadLocationConstant"];
             [self updateShowAddMagnetWindowField];
@@ -867,7 +826,7 @@
     [panel beginSheetModalForWindow: [self window] completionHandler: ^(NSInteger result) {
         if (result == NSFileHandlingPanelOKButton)
         {
-            NSString * folder = [[[panel URLs] objectAtIndex: 0] path];
+            NSString * folder = [[panel URLs][0] path];
             [fDefaults setObject: folder forKey: @"IncompleteDownloadFolder"];
 
             assert(folder.length > 0);
@@ -890,7 +849,7 @@
     [panel beginSheetModalForWindow: [self window] completionHandler: ^(NSInteger result) {
         if (result == NSFileHandlingPanelOKButton)
         {
-            NSString * filePath = [[[panel URLs] objectAtIndex: 0] path];
+            NSString * filePath = [[panel URLs][0] path];
 
             assert(filePath.length > 0);
 
@@ -981,7 +940,7 @@
             VDKQueue * watcherQueue = [(Controller *)[NSApp delegate] fileWatcherQueue];
             [watcherQueue removeAllPaths];
 
-            NSString * path = [[[panel URLs] objectAtIndex: 0] path];
+            NSString * path = [[panel URLs][0] path];
             [fDefaults setObject: path forKey: @"AutoImportDirectory"];
             [watcherQueue addPath: [path stringByExpandingTildeInPath] notifyingAbout: VDKQueueNotifyAboutWrite];
 
@@ -1029,7 +988,6 @@
 
 - (void) setRPCPassword: (id) sender
 {
-    [fRPCPassword release];
     fRPCPassword = [[sender stringValue] copy];
 
     const char * password = [[sender stringValue] UTF8String];
@@ -1045,7 +1003,6 @@
     SecKeychainFindGenericPassword(NULL, strlen(RPC_KEYCHAIN_SERVICE), RPC_KEYCHAIN_SERVICE,
         strlen(RPC_KEYCHAIN_NAME), RPC_KEYCHAIN_NAME, &passwordLength, (void **)&password, NULL);
 
-    [fRPCPassword release];
     if (password != NULL)
     {
         char fullPassword[passwordLength+1];
@@ -1126,7 +1083,7 @@
 
 - (id) tableView: (NSTableView *) tableView objectValueForTableColumn: (NSTableColumn *) tableColumn row: (NSInteger) row
 {
-    return [fRPCWhitelistArray objectAtIndex: row];
+    return fRPCWhitelistArray[row];
 }
 
 - (void) tableView: (NSTableView *) tableView setObjectValue: (id) object forTableColumn: (NSTableColumn *) tableColumn
@@ -1148,7 +1105,7 @@
             {
                 int num = [component intValue];
                 if (num >= 0 && num < 256)
-                    [newComponents addObject: [[NSNumber numberWithInt: num] stringValue]];
+                    [newComponents addObject: [@(num) stringValue]];
                 else
                 {
                     valid = false;
@@ -1164,19 +1121,19 @@
         newIP = [newComponents componentsJoinedByString: @"."];
 
         //don't allow the same ip address
-        if ([fRPCWhitelistArray containsObject: newIP] && ![[fRPCWhitelistArray objectAtIndex: row] isEqualToString: newIP])
+        if ([fRPCWhitelistArray containsObject: newIP] && ![fRPCWhitelistArray[row] isEqualToString: newIP])
             valid = false;
     }
 
     if (valid)
     {
-        [fRPCWhitelistArray replaceObjectAtIndex: row withObject: newIP];
+        fRPCWhitelistArray[row] = newIP;
         [fRPCWhitelistArray sortUsingSelector: @selector(compareNumeric:)];
     }
     else
     {
         NSBeep();
-        if ([[fRPCWhitelistArray objectAtIndex: row] isEqualToString: @""])
+        if ([fRPCWhitelistArray[row] isEqualToString: @""])
             [fRPCWhitelistArray removeObjectAtIndex: row];
     }
 
@@ -1224,10 +1181,10 @@
     [fDefaults setBool: encryptionMode == TR_ENCRYPTION_REQUIRED forKey: @"EncryptionRequire"];
 
     //download directory
-    NSString * downloadLocation = [[NSString stringWithUTF8String: tr_sessionGetDownloadDir(fHandle)] stringByStandardizingPath];
+    NSString * downloadLocation = [@(tr_sessionGetDownloadDir(fHandle)) stringByStandardizingPath];
     [fDefaults setObject: downloadLocation forKey: @"DownloadFolder"];
 
-    NSString * incompleteLocation = [[NSString stringWithUTF8String: tr_sessionGetIncompleteDir(fHandle)] stringByStandardizingPath];
+    NSString * incompleteLocation = [@(tr_sessionGetIncompleteDir(fHandle)) stringByStandardizingPath];
     [fDefaults setObject: incompleteLocation forKey: @"IncompleteDownloadFolder"];
 
     const BOOL useIncomplete = tr_sessionIsIncompleteDirEnabled(fHandle);
@@ -1320,7 +1277,7 @@
     const BOOL blocklist = tr_blocklistIsEnabled(fHandle);
     [fDefaults setBool: blocklist forKey: @"BlocklistNew"];
 
-    NSString * blocklistURL = [NSString stringWithUTF8String: tr_blocklistGetURL(fHandle)];
+    NSString * blocklistURL = @(tr_blocklistGetURL(fHandle));
     [fDefaults setObject: blocklistURL forKey: @"BlocklistURL"];
 
     //seed ratio
@@ -1360,7 +1317,7 @@
     const BOOL doneScriptEnabled = tr_sessionIsTorrentDoneScriptEnabled(fHandle);
     [fDefaults setBool: doneScriptEnabled forKey: @"DoneScriptEnabled"];
 
-    NSString * doneScriptPath = [NSString stringWithUTF8String: tr_sessionGetTorrentDoneScript(fHandle)];
+    NSString * doneScriptPath = @(tr_sessionGetTorrentDoneScript(fHandle));
     [fDefaults setObject: doneScriptPath forKey: @"DoneScriptPath"];
 
     //update gui if loaded
@@ -1486,35 +1443,6 @@
                 [window setTitle: [item label]];
                 break;
             }
-    }
-}
-
-- (void) updateGrowlButton
-{
-    if ([GrowlApplicationBridge isGrowlRunning])
-    {
-        [fBuiltInGrowlButton setHidden: YES];
-        [fGrowlAppButton setHidden: NO];
-
-#warning remove NO
-        [fGrowlAppButton setEnabled: NO && [GrowlApplicationBridge isGrowlURLSchemeAvailable]];
-        [fGrowlAppButton setTitle: NSLocalizedString(@"Configure In Growl", "Prefs -> Notifications")];
-        [fGrowlAppButton sizeToFit];
-
-        [fGrowlAppButton setTarget: self];
-        [fGrowlAppButton setAction: @selector(openGrowlApp:)];
-    }
-    else
-    {
-        [fBuiltInGrowlButton setHidden: YES];
-        [fGrowlAppButton setHidden: NO];
-
-        [fGrowlAppButton setEnabled: YES];
-        [fGrowlAppButton setTitle: NSLocalizedString(@"Configure In System Preferences", "Prefs -> Notifications")];
-        [fGrowlAppButton sizeToFit];
-
-        [fGrowlAppButton setTarget: self];
-        [fGrowlAppButton setAction: @selector(openNotificationSystemPrefs:)];
     }
 }
 
